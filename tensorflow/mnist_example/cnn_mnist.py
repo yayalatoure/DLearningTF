@@ -5,9 +5,22 @@ from __future__ import print_function
 # Imports
 import numpy as np
 import tensorflow as tf
+from matplotlib import pyplot
+import matplotlib as mpl
 
 tf.logging.set_verbosity(tf.logging.INFO)
+def show(image):
+    """
+    Render a given numpy.uint8 2D array of pixel data.
+    """
 
+    fig = pyplot.figure()
+    ax = fig.add_subplot(1,1,1)
+    imgplot = ax.imshow(image, cmap=mpl.cm.Greys)
+    imgplot.set_interpolation('nearest')
+    ax.xaxis.set_ticks_position('top')
+    ax.yaxis.set_ticks_position('left')
+    pyplot.show()
 
 def cnn_model_fn(features, labels, mode):
     """Model function for CNN."""
@@ -84,8 +97,48 @@ def main(unused_argv):
     eval_data = mnist.test.images # Returns np.array
     eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
 
+    print('Size of training data is: ', np.shape(train_data))
+    print('Size of training labels is: ', np.shape(train_labels))
+    print('Size of evaluation data is: ', np.shape(eval_data))
+    print('Size of evaluation data is: ', np.shape(eval_labels))
 
-# Our application logic will be added here
+    image = np.reshape(train_data[0], (28, 28))
+    print('Size of image is: ', np.shape(image))
+    show(image)
+
+    # Create the Estimator
+    mnist_classifier = tf.estimator.Estimator(
+        model_fn=cnn_model_fn, model_dir="C:/Users/lalo/Desktop/CCTVal/DLearningTF/tensorflow/mnist_example/checkpoints")
+    # Directorio anterior para los checkpoints de datos del modelo serán guardados.
+
+    # Set up logging for predictions
+    tensors_to_log = {"probabilities": "softmax_tensor"}
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors=tensors_to_log, every_n_iter=50)
+
+    # Train the model
+    train_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": train_data},
+        y=train_labels,
+        batch_size=100,
+        num_epochs=None,
+        shuffle=True)
+    mnist_classifier.train(
+        input_fn=train_input_fn,
+        steps=20000,
+        hooks=[logging_hook])
+
+    # Evaluate the model and print results
+    # La evaluacion se raliza con la m+etrica definida
+    # anteriormente en: cnn_model_fn -> eval_metric_ops
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": eval_data},
+        y=eval_labels,
+        num_epochs=1,
+        shuffle=False)
+    eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
+    print(eval_results)
+
 
 if __name__ == "__main__":
     tf.app.run()
