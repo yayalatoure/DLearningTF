@@ -76,6 +76,15 @@ def cnn_model_fn(features, labels, mode):
         mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
 
+def main(unused_argv):
+    # Load training and eval data
+    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+    train_data = mnist.train.images # Returns np.array
+    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
+    eval_data = mnist.test.images # Returns np.array
+    eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
+
+
 # Our application logic will be added here
 
 if __name__ == "__main__":
