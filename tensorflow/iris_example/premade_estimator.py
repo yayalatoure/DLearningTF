@@ -59,7 +59,10 @@ def main(argv):
         # Two hidden layers of 10 nodes each.
         hidden_units=[10, 10],
         # The model must choose between 3 classes.
-        n_classes=3)
+        n_classes=3,
+        # Directorio donde guarda checkpoints
+        model_dir="..\iris_example\graph")
+
 
     # Train the Model.
     ''' ver en iris_data la función train_input, que transforma los datos para que 
@@ -71,8 +74,7 @@ def main(argv):
 
     # Evaluate the model.
     eval_result = classifier.evaluate(
-        input_fn=lambda: iris_data.eval_input_fn(test_x, test_y,
-                                                args.batch_size))
+        input_fn=lambda: iris_data.eval_input_fn(test_x, test_y,args.batch_size))
 
     print('\nTest set accuracy: {accuracy:0.3f}\n'.format(**eval_result))
 
@@ -96,6 +98,7 @@ def main(argv):
 
         print(template.format(iris_data.SPECIES[class_id],
                               100 * probability, expec))
+
 
 
 if __name__ == '__main__':
