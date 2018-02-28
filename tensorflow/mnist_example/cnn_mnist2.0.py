@@ -131,7 +131,7 @@ def mnist_model(learning_rate, use_two_conv, use_two_fc, hparam):
     # filewriter is how we write the summary protocol buffers to disk
     writer = tf.summary.FileWriter(LOGDIR)
     writer.add_graph(sess.graph)
-#
+
     ## Format: tensorflow/contrib/tensorboard/plugins/projector/projector_config.proto
     config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
     ## You can add multiple embeddings. Here we add only one.
@@ -142,6 +142,7 @@ def mnist_model(learning_rate, use_two_conv, use_two_fc, hparam):
     # Specify the width and height of a single thumbnail.
     embedding_config.sprite.single_image_dim.extend([28, 28])
     tf.contrib.tensorboard.plugins.projector.visualize_embeddings(writer, config)
+
 
     # training step
     for i in range(2001):
