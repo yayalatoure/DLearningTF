@@ -61,7 +61,7 @@ def main(argv):
         # The model must choose between 3 classes.
         n_classes=3,
         # Directorio donde guarda checkpoints
-        model_dir="..\iris_example\graph")
+    )#model_dir="..\iris_example\graph")
 
 
     # Train the Model.
