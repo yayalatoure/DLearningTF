@@ -173,17 +173,35 @@ def make_hparam_string(learning_rate, use_two_fc, use_two_conv):
 
 def main():
 
-    # You can try adding some more learning rates
-    for learning_rate in [1E-4]:
-        # Include "False" as a value to try different model architectures
-        for use_two_fc in [True]:
-            for use_two_conv in [True]:
-                # Construct a hyperparameter string for each one (example: "lr_1E-3,fc=2,conv=2)
-                hparam = make_hparam_string(learning_rate, use_two_fc, use_two_conv)
-                print('Starting run for %s' % hparam)
+    print('\n')
+    print (type(mnist))
 
-                # Actually run with the new settings
-                mnist_model(learning_rate, use_two_fc, use_two_conv, hparam)
+    a = mnist.train.next_batch(100)
+
+    print('\n', a)
+    print(type(a))
+
+    print('\ntrain data shape: ', np.shape(a[0][0]))
+    print('\nlabel data shape: ', np.shape(a[1]))
+
+    print('\ntrain data type: ', type(a[0][0]))
+    print('\nlabel data type: ', type(a[1]))
+
+    image = np.reshape(a[0][0], (28, 28))
+    print('Size of image is: ', np.shape(image))
+    show(image)
+
+# You can try adding some more learning rates
+#     for learning_rate in [1E-4]:
+#         # Include "False" as a value to try different model architectures
+#         for use_two_fc in [True]:
+#             for use_two_conv in [True]:
+#                 # Construct a hyperparameter string for each one (example: "lr_1E-3,fc=2,conv=2)
+#                 hparam = make_hparam_string(learning_rate, use_two_fc, use_two_conv)
+#                 print('Starting run for %s' % hparam)
+#
+#                 # Actually run with the new settings
+#                 mnist_model(learning_rate, use_two_fc, use_two_conv, hparam)
 
 
 if __name__ == '__main__':

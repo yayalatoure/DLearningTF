@@ -9,6 +9,7 @@ from matplotlib import pyplot
 import matplotlib as mpl
 
 tf.logging.set_verbosity(tf.logging.INFO)
+
 def show(image):
     """
     Render a given numpy.uint8 2D array of pixel data.
@@ -61,10 +62,11 @@ def cnn_model_fn(features, labels, mode):
 
     predictions = {
         # Generate predictions (for PREDICT and EVAL mode)
-        "classes": tf.argmax(input=logits, axis=1),
+        "classes": tf.argmax(input=logits, axis=1, name="clases"),
         # Add `softmax_tensor` to the graph. It is used for PREDICT and by the
         # `logging_hook`.
         "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
+
     }
 
     if mode == tf.estimator.ModeKeys.PREDICT:
@@ -108,11 +110,11 @@ def main(unused_argv):
 
     # Create the Estimator
     mnist_classifier = tf.estimator.Estimator(
-        model_fn=cnn_model_fn, model_dir="C:/Users/lalo/Desktop/CCTVal/DLearningTF/tensorflow/mnist_example/checkpoints")
+        model_fn=cnn_model_fn, model_dir="C:/Users/lalo/Desktop/CCTVal/DLearningTF/tensorflow/mnist_example/checkpoints1")
     # Directorio anterior para los checkpoints de datos del modelo serán guardados.
 
     # Set up logging for predictions
-    tensors_to_log = {"probabilities": "softmax_tensor"}
+    tensors_to_log = {"probabilities":"softmax_tensor", "classes":"clases"}
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log, every_n_iter=50)
 
@@ -125,7 +127,7 @@ def main(unused_argv):
         shuffle=True)
     mnist_classifier.train(
         input_fn=train_input_fn,
-        steps=20000,
+        steps=1000,
         hooks=[logging_hook])
 
     # Evaluate the model and print results
