@@ -144,22 +144,24 @@ def mnist_model(learning_rate, use_two_conv, use_two_fc, hparam):
 
     ## Format: tensorflow/contrib/tensorboard/plugins/projector/projector_config.proto
     config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
-    ## You can add multiple embeddings. Here we add only one.
-    embedding_config = config.embeddings.add()
-    embedding_config.tensor_name = embedding.name
-    embedding_config.sprite.image_path = LOGDIR + 'sprite_1024.png'
-    embedding_config.metadata_path = LOGDIR + 'labels_1024.tsv'
-    # Specify the width and height of a single thumbnail.
-    embedding_config.sprite.single_image_dim.extend([28, 28])
+    # ## You can add multiple embeddings. Here we add only one.
+    # embedding_config = config.embeddings.add()
+    # embedding_config.tensor_name = embedding.name
+    # embedding_config.sprite.image_path = LOGDIR + 'sprite_1024.png'
+    # embedding_config.metadata_path = LOGDIR + 'labels_1024.tsv'
+    # # Specify the width and height of a single thumbnail.
+    # embedding_config.sprite.single_image_dim.extend([28, 28])
     tf.contrib.tensorboard.plugins.projector.visualize_embeddings(writer, config)
 
 
     # training step
-    for i in range(2001):
-        batch = mnist.train.next_batch(100)
+    for i in range(200):
+        batch = mnist.train.next_batch(20)
+        print("iteración: ", i)
         if i % 10 == 0:
             [train_accuracy, s] = sess.run([accuracy, summ], feed_dict={x: batch[0], y: batch[1]})
             writer.add_summary(s, i)
+            print("train accuracy: ", train_accuracy)
         if i % 500 == 0:
             sess.run(assignment, feed_dict={x: mnist.test.images[:1024], y: mnist.test.labels[:1024]})
             # save checkpoints

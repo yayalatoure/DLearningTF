@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 # Imports
+import os
 import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot
@@ -10,11 +11,12 @@ import matplotlib as mpl
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
+LOGDIR = 'C:/Users/lalo/Desktop/CCTVal/DLearningTF/tensorflow/mnist_example/checkpoints1-1/'
+
 def show(image):
     """
     Render a given numpy.uint8 2D array of pixel data.
     """
-
     fig = pyplot.figure()
     ax = fig.add_subplot(1,1,1)
     imgplot = ax.imshow(image, cmap=mpl.cm.Greys)
@@ -24,23 +26,32 @@ def show(image):
     pyplot.show()
 
 def cnn_model_fn(features, labels, mode):
+
+    """Se incorpora save, para ver si se puede guardar
+    accuracy y lost"""
+    tf.reset_default_graph()
+    sess = tf.Session()
+
+
     """Model function for CNN."""
     # Input Layer : [batch_size, image_width, image_height, channels]
     input_layer = tf.reshape(features["x"], [-1, 28, 28, 1])
 
-    # Convolutional Layer #1
+    tf.summary.image('input', input_layer, 3)
+
+    # Convolutional Layer N°1
+    # padding = same => se considera zero padding
     conv1 = tf.layers.conv2d(
         inputs=input_layer,
         filters=32,
         kernel_size=[5, 5],
         padding="same",
         activation=tf.nn.relu)
-    # padding = same => se considera zero padding
 
-    # Pooling Layer #1
+    # Pooling Layer N°1
     pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
 
-    # Convolutional Layer #2 and Pooling Layer #2
+    # Convolutional Layer N°2 and Pooling Layer N°2
     conv2 = tf.layers.conv2d(
         inputs=pool1,
         filters=64,
@@ -50,7 +61,7 @@ def cnn_model_fn(features, labels, mode):
 
     pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
 
-    # Dense Layer
+    # Dense Layer N°1
     pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
 
     dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
@@ -66,14 +77,29 @@ def cnn_model_fn(features, labels, mode):
         # Add `softmax_tensor` to the graph. It is used for PREDICT and by the
         # `logging_hook`.
         "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
-
     }
+
+    """Intentar hacer el logging de datos"""
+
+    summ = tf.summary.merge_all()
+    saver = tf.train.Saver()
+    sess.run(tf.global_variables_initializer())
+    writer = tf.summary.FileWriter(LOGDIR)
+    writer.add_graph(sess.graph)
+    saver.save(sess, os.path.join(LOGDIR, "model.ckpt"))
+
+    ## Format: tensorflow/contrib/tensorboard/plugins/projector/projector_config.proto
+    config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
+
+    tf.contrib.tensorboard.plugins.projector.visualize_embeddings(writer, config)
+
 
     if mode == tf.estimator.ModeKeys.PREDICT:
         return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
     # Calculate Loss (for both TRAIN and EVAL modes)
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+    writer.add_summary(loss)
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:

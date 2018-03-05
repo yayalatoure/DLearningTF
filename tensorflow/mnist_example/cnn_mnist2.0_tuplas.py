@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib import pyplot
 import matplotlib as mpl
 
-#versioning, urllib named differently for dif python versions
+# versioning, urllib named differently for dif python versions
 if sys.version_info[0] >= 3:
     from urllib.request import urlretrieve
 else:
@@ -36,7 +36,6 @@ def show(image):
     """
     Render a given numpy.uint8 2D array of pixel data.
     """
-
     fig = pyplot.figure()
     ax = fig.add_subplot(1,1,1)
     imgplot = ax.imshow(image, cmap=mpl.cm.Greys)
@@ -145,26 +144,29 @@ def mnist_model(learning_rate, use_two_conv, use_two_fc, hparam):
     ## Format: tensorflow/contrib/tensorboard/plugins/projector/projector_config.proto
     config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
     ## You can add multiple embeddings. Here we add only one.
-    embedding_config = config.embeddings.add()
-    embedding_config.tensor_name = embedding.name
-    embedding_config.sprite.image_path = LOGDIR + 'sprite_1024.png'
-    embedding_config.metadata_path = LOGDIR + 'labels_1024.tsv'
-    # Specify the width and height of a single thumbnail.
-    embedding_config.sprite.single_image_dim.extend([28, 28])
+    # embedding_config = config.embeddings.add()
+    # embedding_config.tensor_name = embedding.name
+    # embedding_config.sprite.image_path = LOGDIR + 'sprite_1024.png'
+    # embedding_config.metadata_path = LOGDIR + 'labels_1024.tsv'
+    # # Specify the width and height of a single thumbnail.
+    # embedding_config.sprite.single_image_dim.extend([28, 28])
     tf.contrib.tensorboard.plugins.projector.visualize_embeddings(writer, config)
 
 
-    # training step
-    for i in range(2001):
-        batch = mnist.train.next_batch(100)
+    # TRAINING STEPS
+    for i in range(100):
+        batch = mnist.train.next_batch(10)
+        print("iteración: ", i)
         if i % 10 == 0:
             [train_accuracy, s] = sess.run([accuracy, summ], feed_dict={x: batch[0], y: batch[1]})
             writer.add_summary(s, i)
+            print("train accuracy: ", train_accuracy)
         if i % 500 == 0:
             sess.run(assignment, feed_dict={x: mnist.test.images[:1024], y: mnist.test.labels[:1024]})
             # save checkpoints
             saver.save(sess, os.path.join(LOGDIR, "model.ckpt"), i)
         sess.run(train_step, feed_dict={x: batch[0], y: batch[1]})
+
 
 def make_hparam_string(learning_rate, use_two_fc, use_two_conv):
     conv_param = "conv=2" if use_two_conv else "conv=1"
@@ -191,17 +193,17 @@ def main():
     print('Size of image is: ', np.shape(image))
     show(image)
 
-# You can try adding some more learning rates
-#     for learning_rate in [1E-4]:
-#         # Include "False" as a value to try different model architectures
-#         for use_two_fc in [True]:
-#             for use_two_conv in [True]:
-#                 # Construct a hyperparameter string for each one (example: "lr_1E-3,fc=2,conv=2)
-#                 hparam = make_hparam_string(learning_rate, use_two_fc, use_two_conv)
-#                 print('Starting run for %s' % hparam)
-#
-#                 # Actually run with the new settings
-#                 mnist_model(learning_rate, use_two_fc, use_two_conv, hparam)
+    # You can try adding some more learning rates
+    for learning_rate in [1E-4]:
+        # Include "False" as a value to try different model architectures
+        for use_two_fc in [True]:
+            for use_two_conv in [True]:
+                # Construct a hyperparameter string for each one (example: "lr_1E-3,fc=2,conv=2)
+                hparam = make_hparam_string(learning_rate, use_two_fc, use_two_conv)
+                print('Starting run for %s' % hparam)
+
+                # Actually run with the new settings
+                mnist_model(learning_rate, use_two_fc, use_two_conv, hparam)
 
 
 if __name__ == '__main__':
