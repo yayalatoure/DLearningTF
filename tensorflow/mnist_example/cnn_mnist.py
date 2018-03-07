@@ -29,15 +29,15 @@ def cnn_model_fn(features, labels, mode):
 
     """Se incorpora save, para ver si se puede guardar
     accuracy y lost"""
-    tf.reset_default_graph()
-    sess = tf.Session()
+    # tf.reset_default_graph()
+    # sess = tf.Session()
 
 
     """Model function for CNN."""
     # Input Layer : [batch_size, image_width, image_height, channels]
     input_layer = tf.reshape(features["x"], [-1, 28, 28, 1])
 
-    tf.summary.image('input', input_layer, 3)
+    # tf.summary.image('input', input_layer, 3)
 
     # Convolutional Layer N°1
     # padding = same => se considera zero padding
@@ -81,17 +81,17 @@ def cnn_model_fn(features, labels, mode):
 
     """Intentar hacer el logging de datos"""
 
-    summ = tf.summary.merge_all()
-    saver = tf.train.Saver()
-    sess.run(tf.global_variables_initializer())
-    writer = tf.summary.FileWriter(LOGDIR)
-    writer.add_graph(sess.graph)
-    saver.save(sess, os.path.join(LOGDIR, "model.ckpt"))
-
-    ## Format: tensorflow/contrib/tensorboard/plugins/projector/projector_config.proto
-    config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
-
-    tf.contrib.tensorboard.plugins.projector.visualize_embeddings(writer, config)
+    # summ = tf.summary.merge_all()
+    # saver = tf.train.Saver()
+    # sess.run(tf.global_variables_initializer())
+    # writer = tf.summary.FileWriter(LOGDIR)
+    # writer.add_graph(sess.graph)
+    # saver.save(sess, os.path.join(LOGDIR, "model.ckpt"))
+    #
+    # ## Format: tensorflow/contrib/tensorboard/plugins/projector/projector_config.proto
+    # config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
+    #
+    # tf.contrib.tensorboard.plugins.projector.visualize_embeddings(writer, config)
 
 
     if mode == tf.estimator.ModeKeys.PREDICT:
@@ -99,7 +99,7 @@ def cnn_model_fn(features, labels, mode):
 
     # Calculate Loss (for both TRAIN and EVAL modes)
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
-    writer.add_summary(loss)
+    # writer.add_summary(loss)
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -140,20 +140,20 @@ def main(unused_argv):
     # Directorio anterior para los checkpoints de datos del modelo serán guardados.
 
     # Set up logging for predictions
-    tensors_to_log = {"probabilities":"softmax_tensor", "classes":"clases"}
+    tensors_to_log = {"probabilities":"softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
-        tensors=tensors_to_log, every_n_iter=50)
+        tensors=tensors_to_log, every_n_iter=2)
 
     # Train the model
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
         x={"x": train_data},
         y=train_labels,
-        batch_size=100,
+        batch_size=10,
         num_epochs=None,
         shuffle=True)
     mnist_classifier.train(
         input_fn=train_input_fn,
-        steps=1000,
+        steps=200,
         hooks=[logging_hook])
 
     # Evaluate the model and print results

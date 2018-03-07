@@ -36,7 +36,6 @@ def show(image):
     """
     Render a given numpy.uint8 2D array of pixel data.
     """
-
     fig = pyplot.figure()
     ax = fig.add_subplot(1,1,1)
     imgplot = ax.imshow(image, cmap=mpl.cm.Greys)

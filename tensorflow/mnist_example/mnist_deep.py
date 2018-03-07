@@ -104,6 +104,7 @@ def deepnn(x):
         b_fc1 = bias_variable([1024])
         h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+        tf.summary.histogram("weights", W_fc1)
 
     # Dropout - controls the complexity of the model, prevents co-adaptation of
     # features.
@@ -116,6 +117,8 @@ def deepnn(x):
         W_fc2 = weight_variable([1024, 10])
         b_fc2 = bias_variable([10])
         y_conv = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
+        tf.summary.histogram("weights", W_fc2)
+
     return y_conv, keep_prob
 
 
@@ -136,104 +139,80 @@ def main(_):
     # Build the graph for the deep net
     y_conv, keep_prob = deepnn(x)
 
-
-
     with tf.name_scope('xent'):
         xent = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y_conv)
         xent = tf.reduce_mean(xent)
-        tf.summary.scalar("xent", xent)
-
+        tf.summary.scalar("xent_op", xent)
 
     with tf.name_scope('adam_optimizer'):
         train_step = tf.train.AdamOptimizer(1e-4).minimize(xent)
 
-    # with tf.name_scope('accuracy'):
-    #     correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
-    #     correct_prediction = tf.cast(correct_prediction, tf.float32)
-    #     accuracy = tf.reduce_mean(correct_prediction, tf.float32)
-    #     tf.summary.scalar("acc",accuracy)
-
-
-    with tf.name_scope("accuracy"):
-        # Returns the index with the largest value across axes of a tensor.
+    with tf.name_scope('accuracy'):
         correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
-        # Casts a tensor to a new type.
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        tf.summary.scalar("accuracy", accuracy)
+        correct_prediction = tf.cast(correct_prediction, tf.float32)
+        accuracy = tf.reduce_mean(correct_prediction)
+        tf.summary.scalar("accuracy_op", accuracy)
 
     summ = tf.summary.merge_all()
-
-    # saver = tf.train.Saver()
-    # sess.run(tf.global_variables_initializer())
-    # filewriter is how we write the summary protocol buffers to disk
-    # writer = tf.summary.FileWriter(LOGDIR)
-    # writer.add_graph(sess.graph)
-    ## Format: tensorflow/contrib/tensorboard/plugins/projector/projector_config.proto
-    # config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
-    # tf.contrib.tensorboard.plugins.projector.visualize_embeddings(writer, config)
-
-
     saver = tf.train.Saver()
     sess.run(tf.global_variables_initializer())
-    print('Saving graph to: %s' % LOGDIR)
+    # filewriter is how we write the summary protocol buffers to disk
     train_writer = tf.summary.FileWriter(LOGDIR)
-    train_writer.add_graph(tf.get_default_graph())
+    train_writer.add_graph(sess.graph)
+
+    ## Format: tensorflow/contrib/tensorboard/plugins/projector/projector_config.proto
     config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
     tf.contrib.tensorboard.plugins.projector.visualize_embeddings(train_writer, config)
 
+    '''para volver atrás descomentar'''
+    # print('Saving graph to: %s' % LOGDIR)
+    # train_writer = tf.summary.FileWriter(LOGDIR)
+    # train_writer.add_graph(tf.get_default_graph())
+
+
+    '''para volver atras identar y descomentar with'''
     # with tf.Session() as sess:
-    # sess.run(tf.global_variables_initializer())
+    #     sess.run(tf.global_variables_initializer())
     for i in range(100):
         batch = mnist.train.next_batch(10)
         if i % 10 == 0:
             print ('iteración %g: ' % i)
             """Evaluando accuracy y xent"""
-            # train_accuracy = accuracy.eval(feed_dict={
-            # x: batch[0], y_: batch[1], keep_prob: 1.0})
-            # train_loss = xent.eval(feed_dict={
-            # x: batch[0], y_: batch[1], keep_prob: 1.0})
-            # print('step %d, training accuracy %g' % (i, train_accuracy))
-            # print('step %d, training loss %g' % (i, train_loss))
+            train_accuracy = accuracy.eval(session=sess, feed_dict={
+                    x: batch[0], y_: batch[1], keep_prob: 1.0})
+            train_loss = xent.eval(session=sess, feed_dict={
+                    x: batch[0], y_: batch[1], keep_prob: 1.0})
+            print('step %d, training accuracy %g' % (i, train_accuracy))
+            print('step %d, training loss %g' % (i, train_loss))
 
-            # tf.Summary(value=[tf.Summary.Value(tag='train_accuracy',
-            #                                     simple_value=train_accuracy)])
-            # tf.Summary(value=[tf.Summary.Value(tag='train_loss',
-            #                                           simple_value=train_loss)])
+            with sess.as_default():
+                acc = tf.Summary(value=[tf.Summary.Value(tag='train_accuracy', simple_value=train_accuracy)])
+                loss = tf.Summary(value=[tf.Summary.Value(tag='train_loss', simple_value=train_loss)])
 
-            """tratando de loggear summaries con session"""
-            [train_accuracy, s] = sess.run([accuracy, summ], feed_dict={x: batch[0], y_: batch[1]})
-            train_writer.add_summary(s, i)
-
-            # summ = tf.summary.merge_all()
-
-            # train_writer.add_summary(summ, i)
-
-
-
+                train_writer.add_summary(acc, i)
+                train_writer.add_summary(loss, i)
 
         if i % 50 == 0:
-            print('hola')
-            # saver.save(sess, os.path.join(LOGDIR, "model.ckpt"), i)
+            [train_accuracy, s] = sess.run([accuracy, summ], feed_dict={
+                    x: batch[0], y_: batch[1], keep_prob: 1.0})
+            train_writer.add_summary(s, i)
+            print("train accuracy: ", train_accuracy)
+            # print('hola')
+            saver.save(sess, os.path.join(LOGDIR, "model.ckpt"), i)
 
-        train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
+        train_step.run(session=sess, feed_dict={x: batch[0], y_: batch[1],
+                keep_prob: 1.0})
 
 
-    print('\ntest accuracy %g' % accuracy.eval(feed_dict={
-        x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
 
-    test_cross = correct_prediction.eval(feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
+
+    print('\ntest accuracy: %g' % accuracy.eval(session=sess, feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
+
+    test_cross = correct_prediction.eval(session=sess, feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
 
 
     print('\nshape of cross entropy vector: %g' % np.shape(test_cross))
     print('accuracy form cross_entropy: %g' % (np.sum(test_cross)/np.shape(test_cross)))
-
-
-
-
-
-
-
-
 
 
 
