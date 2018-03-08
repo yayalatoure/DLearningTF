@@ -1,8 +1,8 @@
 
 """ import libraries """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+# from __future__ import absolute_import
+# from __future__ import division
+# from __future__ import print_function
 
 import argparse
 import sys
@@ -128,17 +128,56 @@ def deepnn(x):
     # First convolutional layer - maps one grayscale image to 32 feature maps.
     conv_1 = conv_layer(x_image, 5, 5, 1, 32, "conv_1")
 
-    pool_1 = pool_layer(conv_1,2,2,"pool_1")
+    pool_1 = pool_layer(conv_1, 2, 2, "pool_1")
 
-    full_1 = fc_layer(pool_1, 14*14*32, 1024, True, "full_1")
+    conv_2 = conv_layer(pool_1, 5, 5, 32, 64, "conv_2")
+
+    pool_2 = pool_layer(conv_2, 2, 2, "pool_2")
+
+    full_1 = fc_layer(pool_2, 7*7*64, 1024, True, "full_1")
 
     drop_1, keep_prob = dropout(full_1)
 
     full_2 = fc_layer(drop_1, 1024, 10, False, "full_2")
 
-    # y_conv = full_2
-
     return full_2, keep_prob
+
+def cross_entropy(y_, y_conv, name="xent"):
+    """
+    :param y_: label from dataset
+    :param y_conv: label predicted by cnn
+    :param name: loss function name
+    :return: cross entropy xent object
+    """
+    with tf.name_scope(name):
+        xent = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y_conv)
+        xent = tf.reduce_mean(xent)
+        tf.summary.scalar("xent", xent)
+        return xent
+
+def training(xent, name="adam_optimizer"):
+    """
+    :param xent: cross entropy metric to opotmize
+    :param name: optimizer's name
+    :return: train step
+    """
+    with tf.name_scope(name):
+        train_step = tf.train.AdamOptimizer(1e-4).minimize(xent)
+        return train_step
+
+def accuracy_measure(y_, y_conv, name="accuracy"):
+    """
+    :param y_: label from dataset
+    :param y_conv: label predicted by cnn
+    :param name: accuracy measure name
+    :return: accuracy object
+    """
+    with tf.name_scope(name):
+        correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
+        correct_prediction = tf.cast(correct_prediction, tf.float32)
+        accuracy = tf.reduce_mean(correct_prediction)
+        tf.summary.scalar("accuracy", accuracy)
+        return accuracy, correct_prediction
 
 def main(_):
 
@@ -157,32 +196,19 @@ def main(_):
     # Build the graph for the deep net
     y_conv, keep_prob = deepnn(x)
 
+    xent = cross_entropy(y_, y_conv, "xent")
 
-    """
-    También se pueden implementar como funciones, verificar después.
-    Se va a probar primero el funcionamiento de las capas.
-    """
-    with tf.name_scope('xent'):
-        xent = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y_conv)
-        xent = tf.reduce_mean(xent)
-        tf.summary.scalar("xent_op", xent)
+    train_step = training(xent, "adam_optimizer")
 
-    with tf.name_scope('adam_optimizer'):
-        train_step = tf.train.AdamOptimizer(1e-4).minimize(xent)
+    accuracy, correct_prediction = accuracy_measure(y_, y_conv, "accuracy")
 
-    with tf.name_scope('accuracy'):
-        correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
-        correct_prediction = tf.cast(correct_prediction, tf.float32)
-        accuracy = tf.reduce_mean(correct_prediction)
-        tf.summary.scalar("accuracy_op", accuracy)
-
+    """ Logging configuration """
     summ = tf.summary.merge_all()
     saver = tf.train.Saver()
     sess.run(tf.global_variables_initializer())
     # filewriter is how we write the summary protocol buffers to disk
     train_writer = tf.summary.FileWriter(LOGDIR)
     train_writer.add_graph(sess.graph)
-
     ## Format: tensorflow/contrib/tensorboard/plugins/projector/projector_config.proto
     config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
     tf.contrib.tensorboard.plugins.projector.visualize_embeddings(train_writer, config)
@@ -192,48 +218,43 @@ def main(_):
     # print('Saving graph to: %s' % LOGDIR)
     # train_writer = tf.summary.FileWriter(LOGDIR)
     # train_writer.add_graph(tf.get_default_graph())
-
-
     '''para volver atras identar y descomentar with'''
     # with tf.Session() as sess:
     #     sess.run(tf.global_variables_initializer())
 
-    for i in range(100):
-        batch = mnist.train.next_batch(10)
-        if i % 10 == 0:
+    """ Training Neural Network """
+    for i in range(10000):
+        batch = mnist.train.next_batch(100)
+        if i % 100 == 0:
             print('iteración %g: ' % i)
             """Evaluando accuracy y xent"""
             train_accuracy = accuracy.eval(session=sess, feed_dict={
-                x: batch[0], y_: batch[1], keep_prob: 1.0})
+                x: batch[0], y_: batch[1], keep_prob: 0.8})
             train_loss = xent.eval(session=sess, feed_dict={
-                x: batch[0], y_: batch[1], keep_prob: 1.0})
+                x: batch[0], y_: batch[1], keep_prob: 0.8})
             print('step %d, training accuracy %g' % (i, train_accuracy))
             print('step %d, training loss %g' % (i, train_loss))
 
             with sess.as_default():
                 acc = tf.Summary(value=[tf.Summary.Value(tag='train_accuracy', simple_value=train_accuracy)])
                 loss = tf.Summary(value=[tf.Summary.Value(tag='train_loss', simple_value=train_loss)])
-
                 train_writer.add_summary(acc, i)
                 train_writer.add_summary(loss, i)
 
-        if i % 50 == 0:
+        if i % 1000 == 0:
             [train_accuracy, s] = sess.run([accuracy, summ], feed_dict={
                 x: batch[0], y_: batch[1], keep_prob: 1.0})
             train_writer.add_summary(s, i)
             print("train accuracy: ", train_accuracy)
-            # print('hola')
             saver.save(sess, os.path.join(LOGDIR, "model.ckpt"), i)
 
-        train_step.run(session=sess, feed_dict={x: batch[0], y_: batch[1],
-                                                keep_prob: 1.0})
+        train_step.run(session=sess, feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.8})
 
-    print('\ntest accuracy: %g' % accuracy.eval(session=sess, feed_dict={x: mnist.test.images, y_: mnist.test.labels,
-                                                                         keep_prob: 1.0}))
-
-    test_cross = correct_prediction.eval(session=sess,
-                                         feed_dict={x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
-
+    test_accuracy = accuracy.eval(session=sess, feed_dict={
+                    x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0})
+    print('\ntest accuracy: %g' % test_accuracy)
+    test_cross = correct_prediction.eval(session=sess, feed_dict={
+                 x: mnist.test.images, y_: mnist.test.labels, keep_prob: 0.8})
     print('\nshape of cross entropy vector: %g' % np.shape(test_cross))
     print('accuracy form cross_entropy: %g' % (np.sum(test_cross) / np.shape(test_cross)))
 
