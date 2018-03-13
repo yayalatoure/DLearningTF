@@ -1,8 +1,8 @@
 
 """ import libraries """
-# from __future__ import absolute_import
-# from __future__ import division
-# from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import argparse
 import sys
@@ -186,6 +186,7 @@ def main(_):
 
     # Import data
     mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
+    print('\n type mnist dataset: ', type(mnist))
 
     # Create the model
     x = tf.placeholder(tf.float32, [None, 784])
@@ -223,7 +224,7 @@ def main(_):
     #     sess.run(tf.global_variables_initializer())
 
     """ Training Neural Network """
-    for i in range(10000):
+    for i in range(200):
         batch = mnist.train.next_batch(100)
         if i % 100 == 0:
             print('iteración %g: ' % i)
@@ -234,6 +235,10 @@ def main(_):
                 x: batch[0], y_: batch[1], keep_prob: 0.8})
             print('step %d, training accuracy %g' % (i, train_accuracy))
             print('step %d, training loss %g' % (i, train_loss))
+
+            test_accuracy = accuracy.eval(session=sess, feed_dict={
+                            x: mnist.test.images, y_: mnist.test.labels, keep_prob: 0.8})
+            print('\ntest accuracy: %g' % test_accuracy)
 
             with sess.as_default():
                 acc = tf.Summary(value=[tf.Summary.Value(tag='train_accuracy', simple_value=train_accuracy)])
